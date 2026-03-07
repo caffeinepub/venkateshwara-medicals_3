@@ -218,11 +218,7 @@ actor {
     productsArray.filter<Product>(func(product) { product.featured });
   };
 
-  public shared ({ caller }) func seedSampleProducts() : async () {
-    if (not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Only admins can seed products");
-    };
-
+  public shared func seedSampleProducts() : async () {
     // Only seed if no products exist
     if (products.size() > 0) {
       return;

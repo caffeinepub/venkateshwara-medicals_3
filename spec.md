@@ -1,31 +1,24 @@
 # Venkateshwara Medicals
 
 ## Current State
-Full-stack medical store app with:
-- Motoko backend with product catalog (6 categories, CRUD, seed function with only 5 basic sample products)
-- React frontend with homepage, product browsing, search/filter, and admin panel with username/password login
-- Categories: Prescription Medicines, OTC Medicines, Health Supplements, Personal Care, Baby Care, Medical Devices
+Full medical store website with:
+- Product catalog with 6 categories (prescriptionMedicines, otcMedicines, healthSupplements, personalCare, babyCare, medicalDevices)
+- Admin panel at `/admin` with username/password login (frontend-only auth: Babu / Happy#26)
+- Backend functions: addProduct, updateProduct, deleteProduct, toggleStockStatus, toggleFeaturedStatus, getAllProducts, getProductsByCategory, searchProductsByName, getFeaturedProducts, getProduct, seedSampleProducts
+- `seedSampleProducts` currently requires admin role authorization on the backend, causing a failure since the frontend uses password-based auth (not Internet Identity)
 
 ## Requested Changes (Diff)
 
 ### Add
-- 30+ realistic sample products across all 6 categories, inspired by Apollo Pharmacy and Tata 1mg product listings
-- Products should include real medicine/product names, accurate Indian prices (in Rs.), and realistic descriptions
-- Each category should have 4-6 representative products
+- Nothing new
 
 ### Modify
-- Backend: Replace the 5-product seed data with a rich catalog of 30+ products
-- Ensure a mix of featured and non-featured products, all in stock
+- `seedSampleProducts` backend function: remove the admin authorization check so it can be called by any caller (anonymous or otherwise). It already has a guard to only seed if no products exist, so it's safe to open up.
 
 ### Remove
-- Nothing removed
+- Nothing
 
 ## Implementation Plan
-1. Update `seedSampleProducts` in `main.mo` to include 30+ realistic products across all categories:
-   - Prescription Medicines: Metformin, Atorvastatin, Amlodipine, Pantoprazole, Azithromycin, Cetirizine
-   - OTC Medicines: Crocin, Vicks VapoRub, Gelusil, Dettol Antiseptic, Volini Gel, ORS Electral
-   - Health Supplements: Revital H, Vitamin D3, Calcium Sandoz, Omega-3 Fish Oil, Protinex, Centrum
-   - Personal Care: Himalaya Face Wash, Dove Soap, Colgate, Head & Shoulders, Dettol Hand Wash, Nivea Cream
-   - Baby Care: Johnson's Baby Powder, Pampers Diapers, Cerelac, Lactogen Formula, Desitin Rash Cream
-   - Medical Devices: BP Monitor, Glucometer, Digital Thermometer, Pulse Oximeter, Nebulizer
-2. Update nextProductId accordingly
+1. Regenerate Motoko backend with `seedSampleProducts` as a public shared function without any access control check
+2. Keep all other functions and data types exactly the same
+3. Keep the 35 sample products in the seed data unchanged
