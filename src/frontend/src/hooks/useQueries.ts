@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Category, type Product } from "../backend.d";
+import { Category, type OrderItem, type Product } from "../backend.d";
 import { useActor } from "./useActor";
 
 // ── Query Keys ────────────────────────────────────────────────────────────
@@ -153,6 +153,28 @@ export function useToggleFeaturedStatus() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
+export function usePlaceOrder() {
+  const { actor } = useActor();
+  return useMutation({
+    mutationFn: async (data: {
+      customerName: string;
+      phone: string;
+      address: string;
+      items: Array<OrderItem>;
+      totalAmount: number;
+    }) => {
+      if (!actor) throw new Error("Actor not ready");
+      return actor.placeOrder(
+        data.customerName,
+        data.phone,
+        data.address,
+        data.items,
+        data.totalAmount,
+      );
     },
   });
 }

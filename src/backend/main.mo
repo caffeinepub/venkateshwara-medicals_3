@@ -5,11 +5,14 @@ import Nat "mo:core/Nat";
 import Text "mo:core/Text";
 import Order "mo:core/Order";
 import Float "mo:core/Float";
+import Time "mo:core/Time";
 import Runtime "mo:core/Runtime";
 import Principal "mo:core/Principal";
 
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
+
+
 
 actor {
   let accessControlState = AccessControl.initState();
@@ -78,6 +81,73 @@ actor {
     userProfiles.add(caller, profile);
   };
 
+  public type OrderItem = {
+    productId : Nat;
+    productName : Text;
+    quantity : Nat;
+    price : Float;
+  };
+
+  public type OrderStatus = {
+    #pending;
+    #confirmed;
+    #delivered;
+  };
+
+  public type Order = {
+    id : Nat;
+    customerName : Text;
+    phone : Text;
+    address : Text;
+    items : [OrderItem];
+    totalAmount : Float;
+    createdAt : Int;
+    status : OrderStatus;
+  };
+
+  let orders = Map.empty<Nat, Order>();
+  var nextOrderId = 1;
+
+  public shared ({ caller }) func placeOrder(
+    customerName : Text,
+    phone : Text,
+    address : Text,
+    items : [OrderItem],
+    totalAmount : Float,
+  ) : async Nat {
+    if (customerName.isEmpty() or phone.isEmpty() or address.isEmpty()) {
+      Runtime.trap("All customer fields are required");
+    };
+
+    if (items.size() == 0) {
+      Runtime.trap("Order must contain at least one item");
+    };
+
+    let id = nextOrderId;
+    nextOrderId += 1;
+
+    let order : Order = {
+      id;
+      customerName;
+      phone;
+      address;
+      items;
+      totalAmount;
+      createdAt = Time.now();
+      status = #pending; // all orders start as PENDING
+    };
+
+    orders.add(id, order);
+    id; // return order id to customer
+  };
+
+  public query ({ caller }) func getAllOrders() : async [Order] {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can view orders");
+    };
+    orders.values().toArray();
+  };
+
   public shared ({ caller }) func addProduct(
     name : Text,
     category : Category,
@@ -98,11 +168,10 @@ actor {
       description;
       price;
       inStock = true;
-      featured = false;
+      featured = false; // new products are not featured by default
     };
 
     products.add(id, product);
-
     id;
   };
 
@@ -141,9 +210,7 @@ actor {
 
     switch (products.get(id)) {
       case (null) { Runtime.trap("Product not found") };
-      case (?_) {
-        products.remove(id);
-      };
+      case (?_) { products.remove(id) };
     };
   };
 
@@ -202,15 +269,19 @@ actor {
 
   public query func getProductsByCategory(category : Category) : async [Product] {
     let productsArray = products.values().toArray();
-    productsArray.filter<Product>(func(product) { product.category == category });
+    productsArray.filter<Product>(
+      func(product) { product.category == category }
+    );
   };
 
   public query func searchProductsByName(searchTerm : Text) : async [Product] {
     let productsArray = products.values().toArray();
     let normalizedSearchTerm = searchTerm.toLower();
-    productsArray.filter<Product>(func(product) {
-      product.name.toLower().contains(#text normalizedSearchTerm);
-    });
+    productsArray.filter<Product>(
+      func(product) {
+        product.name.toLower().contains(#text normalizedSearchTerm);
+      }
+    );
   };
 
   public query func getFeaturedProducts() : async [Product] {
@@ -556,5 +627,7 @@ actor {
     for (product in samples.vals()) {
       products.add(product.id, product);
     };
+
+    nextProductId := 36;
   };
 };

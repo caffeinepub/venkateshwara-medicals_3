@@ -16,6 +16,25 @@ export type Category = { 'medicalDevices' : null } |
   { 'otcMedicines' : null } |
   { 'prescriptionMedicines' : null } |
   { 'personalCare' : null };
+export interface Order {
+  'id' : bigint,
+  'customerName' : string,
+  'status' : OrderStatus,
+  'createdAt' : bigint,
+  'totalAmount' : number,
+  'address' : string,
+  'phone' : string,
+  'items' : Array<OrderItem>,
+}
+export interface OrderItem {
+  'productId' : bigint,
+  'productName' : string,
+  'quantity' : bigint,
+  'price' : number,
+}
+export type OrderStatus = { 'pending' : null } |
+  { 'delivered' : null } |
+  { 'confirmed' : null };
 export interface Product {
   'id' : bigint,
   'featured' : boolean,
@@ -34,6 +53,7 @@ export interface _SERVICE {
   'addProduct' : ActorMethod<[string, Category, string, number], bigint>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'deleteProduct' : ActorMethod<[bigint], undefined>,
+  'getAllOrders' : ActorMethod<[], Array<Order>>,
   'getAllProducts' : ActorMethod<[], Array<Product>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
@@ -42,6 +62,10 @@ export interface _SERVICE {
   'getProductsByCategory' : ActorMethod<[Category], Array<Product>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'placeOrder' : ActorMethod<
+    [string, string, string, Array<OrderItem>, number],
+    bigint
+  >,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'searchProductsByName' : ActorMethod<[string], Array<Product>>,
   'seedSampleProducts' : ActorMethod<[], undefined>,

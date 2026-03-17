@@ -1,24 +1,28 @@
 # Venkateshwara Medicals
 
 ## Current State
-Full medical store website with:
-- Product catalog with 6 categories (prescriptionMedicines, otcMedicines, healthSupplements, personalCare, babyCare, medicalDevices)
-- Admin panel at `/admin` with username/password login (frontend-only auth: Babu / Happy#26)
-- Backend functions: addProduct, updateProduct, deleteProduct, toggleStockStatus, toggleFeaturedStatus, getAllProducts, getProductsByCategory, searchProductsByName, getFeaturedProducts, getProduct, seedSampleProducts
-- `seedSampleProducts` currently requires admin role authorization on the backend, causing a failure since the frontend uses password-based auth (not Internet Identity)
+Admin panel has a CUSTOMER ORDERS tab showing orders from localStorage. Orders have 3 statuses: pending, confirmed, delivered. Status is display-only -- admin cannot change it.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Nothing new
+- Status options: pending, processing, completed, cancelled
+- Dropdown in the orders table Status column for admin to change order status
+- Persist status changes back to localStorage
 
 ### Modify
-- `seedSampleProducts` backend function: remove the admin authorization check so it can be called by any caller (anonymous or otherwise). It already has a guard to only seed if no products exist, so it's safe to open up.
+- StatusBadge to support all 4 statuses with distinct colors
+- Orders stats card to reflect new statuses
+- LocalOrder type to use new 4-option union
 
 ### Remove
-- Nothing
+- "confirmed" and "delivered" status values (replaced by processing/completed)
 
 ## Implementation Plan
-1. Regenerate Motoko backend with `seedSampleProducts` as a public shared function without any access control check
-2. Keep all other functions and data types exactly the same
-3. Keep the 35 sample products in the seed data unchanged
+1. Update LocalOrder status type to `pending | processing | completed | cancelled`
+2. Update StatusBadge colors for all 4 statuses
+3. Add saveOrdersToLocalStorage helper
+4. Add useState for mutable orders list
+5. Add handleStatusChange function that updates state + localStorage
+6. Replace static StatusBadge in table with a Select dropdown for admin
+7. Update order stats cards to show new status breakdowns

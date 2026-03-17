@@ -19,6 +19,7 @@ import {
   Pill,
   Search,
   Shield,
+  ShoppingCart,
   Star,
   Truck,
   X,
@@ -26,6 +27,8 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import type { Product } from "../backend.d";
+import CartDrawer from "../components/CartDrawer";
+import { useCart } from "../context/CartContext";
 import {
   Category,
   useAllProducts,
@@ -34,58 +37,146 @@ import {
 
 interface HomePageProps {
   onNavigateAdmin: () => void;
+  onNavigateCheckout: () => void;
 }
 
 const CATEGORY_META: Record<
   Category,
-  { label: string; icon: React.ReactNode; color: string; bg: string }
+  {
+    label: string;
+    icon: React.ReactNode;
+    color: string;
+    bg: string;
+    image: string;
+  }
 > = {
   [Category.prescriptionMedicines]: {
     label: "Prescription Medicines",
     icon: <Pill className="w-6 h-6" />,
     color: "text-blue-700",
     bg: "bg-blue-50 hover:bg-blue-100",
+    image: "/assets/generated/product-prescription-medicines.dim_400x300.jpg",
   },
   [Category.otcMedicines]: {
     label: "OTC Medicines",
     icon: <Activity className="w-6 h-6" />,
     color: "text-emerald-700",
     bg: "bg-emerald-50 hover:bg-emerald-100",
+    image: "/assets/generated/product-otc-medicines.dim_400x300.jpg",
   },
   [Category.healthSupplements]: {
     label: "Health Supplements",
     icon: <Heart className="w-6 h-6" />,
     color: "text-rose-700",
     bg: "bg-rose-50 hover:bg-rose-100",
+    image: "/assets/generated/product-health-supplements.dim_400x300.jpg",
   },
   [Category.personalCare]: {
     label: "Personal Care",
     icon: <Droplets className="w-6 h-6" />,
     color: "text-purple-700",
     bg: "bg-purple-50 hover:bg-purple-100",
+    image: "/assets/generated/product-personal-care.dim_400x300.jpg",
   },
   [Category.babyCare]: {
     label: "Baby Care",
     icon: <Baby className="w-6 h-6" />,
     color: "text-pink-700",
     bg: "bg-pink-50 hover:bg-pink-100",
+    image: "/assets/generated/product-baby-care.dim_400x300.jpg",
   },
   [Category.medicalDevices]: {
     label: "Medical Devices",
     icon: <Cpu className="w-6 h-6" />,
     color: "text-slate-700",
     bg: "bg-slate-50 hover:bg-slate-100",
+    image: "/assets/generated/product-medical-devices.dim_400x300.jpg",
   },
 };
 
 const ALL_CATEGORIES = Object.values(Category);
 
-export default function HomePage({ onNavigateAdmin }: HomePageProps) {
+// Per-product image map keyed by exact product name from seed data
+const PRODUCT_IMAGE_MAP: Record<string, string> = {
+  "Metformin 500mg Tablet (Glycomet)":
+    "/assets/generated/metformin-500mg.dim_400x400.jpg",
+  "Atorvastatin 10mg Tablet (Atorva)":
+    "/assets/generated/atorvastatin-10mg.dim_400x400.jpg",
+  "Amlodipine 5mg Tablet (Amlokind)":
+    "/assets/generated/amlodipine-5mg.dim_400x400.jpg",
+  "Pantoprazole 40mg Tablet (Pan D)":
+    "/assets/generated/pantoprazole-40mg.dim_400x400.jpg",
+  "Azithromycin 500mg Tablet (Azithral)":
+    "/assets/generated/azithromycin-500mg.dim_400x400.jpg",
+  "Cetirizine 10mg Tablet (Cetzine)":
+    "/assets/generated/cetirizine-10mg.dim_400x400.jpg",
+  "Crocin Advance 500mg Tablet":
+    "/assets/generated/crocin-advance-500mg.dim_400x400.jpg",
+  "Vicks VapoRub 50ml": "/assets/generated/vicks-vaporub-50ml.dim_400x400.jpg",
+  "Gelusil MPS Antacid Tablet":
+    "/assets/generated/gelusil-antacid.dim_400x400.jpg",
+  "Dettol Antiseptic Liquid 250ml":
+    "/assets/generated/dettol-antiseptic-100ml.dim_400x400.jpg",
+  "Volini Pain Relief Gel 30g": "/assets/generated/volini-gel.dim_400x400.jpg",
+  "Electral ORS Powder Orange 21.8g":
+    "/assets/generated/ors-electral.dim_400x400.jpg",
+  "Revital H for Men (30 Capsules)":
+    "/assets/generated/revital-multivitamin.dim_400x400.jpg",
+  "Vitamin D3 1000 IU Tablet (60s)":
+    "/assets/generated/vitamin-d3-1000iu.dim_400x400.jpg",
+  "Calcium Sandoz Forte 500mg (30 Tablets)":
+    "/assets/generated/calcium-vitamin-d3.dim_400x400.jpg",
+  "Omega-3 Fish Oil 1000mg (60 Softgels)":
+    "/assets/generated/omega3-fish-oil-1000mg.dim_400x400.jpg",
+  "Protinex Original Powder 400g":
+    "/assets/generated/protinex-powder.dim_400x400.jpg",
+  "Centrum Adults Multivitamin (30 Tablets)":
+    "/assets/generated/centrum-multivitamin.dim_400x400.jpg",
+  "Himalaya Purifying Neem Face Wash 150ml":
+    "/assets/generated/himalaya-neem-facewash.dim_400x400.jpg",
+  "Dove Beauty Cream Bar 100g (Pack of 3)":
+    "/assets/generated/dove-cream-bar.dim_400x400.jpg",
+  "Colgate Strong Teeth Toothpaste 200g":
+    "/assets/generated/colgate-toothpaste.dim_400x400.jpg",
+  "Head & Shoulders Anti-Dandruff Shampoo 340ml":
+    "/assets/generated/head-shoulders-shampoo.dim_400x400.jpg",
+  "Dettol Original Hand Wash 250ml":
+    "/assets/generated/dettol-handwash.dim_400x400.jpg",
+  "Nivea Soft Moisturising Cream 200ml":
+    "/assets/generated/nivea-soft-cream.dim_400x400.jpg",
+  "Johnson's Baby Powder 200g":
+    "/assets/generated/johnsons-baby-powder.dim_400x400.jpg",
+  "Pampers Active Baby Pants Large (42 Count)":
+    "/assets/generated/pampers-active-baby.dim_400x400.jpg",
+  "Nestle Cerelac Baby Cereal Wheat 300g":
+    "/assets/generated/cerelac-baby-cereal.dim_400x400.jpg",
+  "Nan Pro 1 Infant Formula 400g":
+    "/assets/generated/infant-formula-nan.dim_400x400.jpg",
+  "Himalaya Baby Massage Oil 200ml":
+    "/assets/generated/himalaya-baby-oil.dim_400x400.jpg",
+  "Omron HEM-7120 Blood Pressure Monitor":
+    "/assets/generated/omron-bp-monitor.dim_400x400.jpg",
+  "Dr. Morepen BG-03 Glucometer Kit":
+    "/assets/generated/accu-chek-glucometer.dim_400x400.jpg",
+  "Dr. Trust Digital Thermometer":
+    "/assets/generated/digital-thermometer.dim_400x400.jpg",
+  "Dr. Trust Pulse Oximeter":
+    "/assets/generated/pulse-oximeter.dim_400x400.jpg",
+  "Omron NE-C28 Nebulizer": "/assets/generated/omron-nebulizer.dim_400x400.jpg",
+  "Vissco Knee Cap Support (Medium)":
+    "/assets/generated/vissco-knee-support.dim_400x400.jpg",
+};
+
+export default function HomePage({
+  onNavigateAdmin,
+  onNavigateCheckout,
+}: HomePageProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<Category | "all">(
     "all",
   );
+  const [cartOpen, setCartOpen] = useState(false);
   const productsRef = useRef<HTMLElement>(null);
   const aboutRef = useRef<HTMLElement>(null);
   const servicesRef = useRef<HTMLElement>(null);
@@ -93,6 +184,7 @@ export default function HomePage({ onNavigateAdmin }: HomePageProps) {
 
   const { data: products = [], isLoading } = useAllProducts();
   const seedMutation = useSeedSampleProducts();
+  const { cartCount } = useCart();
 
   // Seed sample products on first load if empty
   useEffect(() => {
@@ -181,6 +273,22 @@ export default function HomePage({ onNavigateAdmin }: HomePageProps) {
           </nav>
 
           <div className="flex items-center gap-3">
+            {/* Cart button */}
+            <button
+              type="button"
+              onClick={() => setCartOpen(true)}
+              className="relative flex items-center justify-center w-10 h-10 rounded-xl hover:bg-blue-50 text-foreground/70 hover:text-medical-blue transition-colors"
+              data-ocid="nav.cart.button"
+              aria-label="Open cart"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-medical-blue text-white text-[10px] font-ui font-bold flex items-center justify-center px-1">
+                  {cartCount > 99 ? "99+" : cartCount}
+                </span>
+              )}
+            </button>
+
             <Button
               variant="default"
               size="sm"
@@ -273,6 +381,16 @@ export default function HomePage({ onNavigateAdmin }: HomePageProps) {
           )}
         </AnimatePresence>
       </header>
+
+      {/* Cart Drawer */}
+      <CartDrawer
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        onCheckout={() => {
+          setCartOpen(false);
+          onNavigateCheckout();
+        }}
+      />
 
       <main>
         {/* ── Hero Section ──────────────────────────────────────────────────── */}
@@ -468,15 +586,17 @@ export default function HomePage({ onNavigateAdmin }: HomePageProps) {
                   (id) => (
                     <div
                       key={`skeleton-${id}`}
-                      className="bg-card rounded-xl border border-border p-5 space-y-3"
+                      className="bg-card rounded-xl border border-border overflow-hidden"
                     >
-                      <Skeleton className="h-4 w-3/4 rounded" />
-                      <Skeleton className="h-3 w-1/2 rounded" />
-                      <Skeleton className="h-3 w-full rounded" />
-                      <Skeleton className="h-3 w-2/3 rounded" />
-                      <div className="flex justify-between items-center pt-2">
-                        <Skeleton className="h-5 w-16 rounded" />
-                        <Skeleton className="h-5 w-16 rounded-full" />
+                      <Skeleton className="h-40 w-full rounded-none" />
+                      <div className="p-4 space-y-3">
+                        <Skeleton className="h-4 w-3/4 rounded" />
+                        <Skeleton className="h-3 w-1/2 rounded" />
+                        <Skeleton className="h-3 w-full rounded" />
+                        <div className="flex justify-between items-center pt-2">
+                          <Skeleton className="h-5 w-16 rounded" />
+                          <Skeleton className="h-8 w-24 rounded" />
+                        </div>
                       </div>
                     </div>
                   ),
@@ -908,6 +1028,8 @@ export default function HomePage({ onNavigateAdmin }: HomePageProps) {
 // ── Product Card Component ─────────────────────────────────────────────────
 function ProductCard({ product, index }: { product: Product; index: number }) {
   const meta = CATEGORY_META[product.category];
+  const { addToCart } = useCart();
+  const productImage = PRODUCT_IMAGE_MAP[product.name] ?? meta.image;
 
   return (
     <motion.div
@@ -916,25 +1038,30 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
       viewport={{ once: true }}
       transition={{ duration: 0.35, delay: Math.min(index * 0.04, 0.3) }}
       whileHover={{ y: -3 }}
-      className="bg-card rounded-xl border border-border p-5 shadow-xs hover:shadow-card transition-all duration-200 flex flex-col"
+      className="bg-card rounded-xl border border-border shadow-xs hover:shadow-card transition-all duration-200 flex flex-col overflow-hidden"
       data-ocid={`products.item.${index + 1}`}
     >
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <div className={`inline-flex p-2 rounded-lg ${meta.bg}`}>
-          <span className={meta.color}>{meta.icon}</span>
-        </div>
-        <div className="flex flex-col items-end gap-1">
+      {/* Product image thumbnail */}
+      <div className="relative h-40 overflow-hidden bg-white flex items-center justify-center">
+        <img
+          src={productImage}
+          alt={product.name}
+          className="w-full h-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
+          loading="lazy"
+        />
+        {/* Stock / featured badges overlaid on image */}
+        <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
           {product.inStock ? (
-            <span className="green-badge text-xs px-2 py-0.5 rounded-full font-ui font-medium">
+            <span className="green-badge text-xs px-2 py-0.5 rounded-full font-ui font-medium shadow-sm">
               In Stock
             </span>
           ) : (
-            <span className="text-xs px-2 py-0.5 rounded-full font-ui font-medium bg-red-50 text-red-600 border border-red-200">
+            <span className="text-xs px-2 py-0.5 rounded-full font-ui font-medium bg-red-50 text-red-600 border border-red-200 shadow-sm">
               Out of Stock
             </span>
           )}
           {product.featured && (
-            <span className="blue-badge text-xs px-2 py-0.5 rounded-full font-ui font-medium flex items-center gap-1">
+            <span className="blue-badge text-xs px-2 py-0.5 rounded-full font-ui font-medium flex items-center gap-1 shadow-sm">
               <Star className="w-3 h-3" />
               Featured
             </span>
@@ -942,34 +1069,37 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         </div>
       </div>
 
-      <h3 className="font-ui font-bold text-foreground mb-1 leading-tight line-clamp-2">
-        {product.name}
-      </h3>
+      <div className="p-4 flex flex-col flex-1">
+        <h3 className="font-ui font-bold text-foreground mb-1 leading-tight line-clamp-2 text-sm">
+          {product.name}
+        </h3>
 
-      <Badge
-        variant="outline"
-        className={`self-start text-xs mb-2 ${meta.color} border-current/30 bg-current/5`}
-      >
-        {meta.label}
-      </Badge>
-
-      <p className="text-muted-foreground text-xs leading-relaxed mb-4 flex-1 line-clamp-2">
-        {product.description}
-      </p>
-
-      <div className="flex items-center justify-between mt-auto pt-3 border-t border-border">
-        <span className="font-display text-xl font-bold text-medical-blue">
-          ₹{product.price.toFixed(2)}
-        </span>
-        <Button
-          size="sm"
+        <Badge
           variant="outline"
-          disabled={!product.inStock}
-          className="text-xs font-ui border-medical-blue text-medical-blue hover:bg-medical-blue hover:text-white transition-colors disabled:opacity-40"
-          data-ocid={`products.buy.button.${index + 1}`}
+          className={`self-start text-xs mb-2 ${meta.color} border-current/30 bg-current/5`}
         >
-          {product.inStock ? "Add to Cart" : "Unavailable"}
-        </Button>
+          {meta.label}
+        </Badge>
+
+        <p className="text-muted-foreground text-xs leading-relaxed mb-4 flex-1 line-clamp-2">
+          {product.description}
+        </p>
+
+        <div className="flex items-center justify-between mt-auto pt-3 border-t border-border">
+          <span className="font-display text-xl font-bold text-medical-blue">
+            ₹{product.price.toFixed(2)}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!product.inStock}
+            onClick={() => product.inStock && addToCart(product)}
+            className="text-xs font-ui border-medical-blue text-medical-blue hover:bg-medical-blue hover:text-white transition-colors disabled:opacity-40"
+            data-ocid={`products.buy.button.${index + 1}`}
+          >
+            {product.inStock ? "Add to Cart" : "Unavailable"}
+          </Button>
+        </div>
       </div>
     </motion.div>
   );
